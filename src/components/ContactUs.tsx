@@ -1,11 +1,76 @@
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { MapPin, Phone, Mail, Clock, Send, Calendar } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, Calendar, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { API_ENDPOINTS } from "../config/api";
 
 export function ContactUs() {
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    company: '',
+    phone: '',
+    industry: '',
+    message: ''
+  });
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitMessage, setSubmitMessage] = useState('');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus('idle');
+
+    try {
+      const response = await fetch(API_ENDPOINTS.contact, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setSubmitStatus('success');
+        setSubmitMessage(result.message || 'Thank you! Your message has been sent successfully.');
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          company: '',
+          phone: '',
+          industry: '',
+          message: ''
+        });
+      } else {
+        setSubmitStatus('error');
+        setSubmitMessage(result.error || 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      setSubmitStatus('error');
+      setSubmitMessage('Network error. Please check your connection and try again.');
+      console.error('Contact form error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-20 max-w-6xl">
@@ -30,38 +95,91 @@ export function ContactUs() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form className="space-y-6">
+              {/* Status Messages */}
+              {submitStatus === 'success' && (
+                <div className="flex items-center space-x-2 p-4 bg-green-50 border border-green-200 rounded-md">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <p className="text-green-800">{submitMessage}</p>
+                </div>
+              )}
+              
+              {submitStatus === 'error' && (
+                <div className="flex items-center space-x-2 p-4 bg-red-50 border border-red-200 rounded-md">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <p className="text-red-800">{submitMessage}</p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="John" />
+                    <Label htmlFor="firstName">First Name *</Label>
+                    <Input 
+                      id="firstName" 
+                      placeholder="John" 
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      required
+                      disabled={isSubmitting}
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Doe" />
+                    <Label htmlFor="lastName">Last Name *</Label>
+                    <Input 
+                      id="lastName" 
+                      placeholder="Doe" 
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      required
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Work Email</Label>
-                  <Input id="email" type="email" placeholder="john@company.com" />
+                  <Label htmlFor="email">Work Email *</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="john@company.com" 
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    disabled={isSubmitting}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="company">Company</Label>
-                  <Input id="company" placeholder="Your Company Name" />
+                  <Input 
+                    id="company" 
+                    placeholder="Your Company Name" 
+                    value={formData.company}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" type="tel" placeholder="+1 (555) 123-4567" />
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    placeholder="+1 (555) 123-4567" 
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="industry">Industry</Label>
                   <select 
                     id="industry" 
-                    className="w-full px-3 py-2 bg-input-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full px-3 py-2 bg-input-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    value={formData.industry}
+                    onChange={handleInputChange}
+                    disabled={isSubmitting}
                   >
                     <option value="">Select your industry</option>
                     <option value="mining">Mining & Aggregates</option>
@@ -72,17 +190,35 @@ export function ContactUs() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
+                  <Label htmlFor="message">Message *</Label>
                   <Textarea 
                     id="message" 
                     placeholder="Tell us about your inventory management challenges and what you're looking to achieve..."
                     className="min-h-[120px]"
+                    value={formData.message}
+                    onChange={handleInputChange}
+                    required
+                    disabled={isSubmitting}
                   />
                 </div>
                 
-                <Button className="w-full group" size="lg">
-                  <Send className="mr-2 h-4 w-4" />
-                  Send Message
+                <Button 
+                  type="submit" 
+                  className="w-full group" 
+                  size="lg"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
